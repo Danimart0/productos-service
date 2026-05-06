@@ -11,6 +11,8 @@
         <logRegion>us-east-1</logRegion>
         <!-- Con LocalStack -->
         <customEndpoint>${LOCALSTACK_ENDPOINT:http://localhost:4566}</customEndpoint>
+        <accessKeyId>test</accessKeyId>
+        <secretAccessKey>test</secretAccessKey>
         <maxBatchLogEvents>50</maxBatchLogEvents>
         <maxFlushTimeMillis>30000</maxFlushTimeMillis>
         <maxBlockTimeMillis>5000</maxBlockTimeMillis>

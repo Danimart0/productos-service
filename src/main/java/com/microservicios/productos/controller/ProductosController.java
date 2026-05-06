@@ -8,7 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Optional;
+
+import org.springframework.kafka.core.KafkaTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 @RestController
 @RequestMapping("/productos")
@@ -18,6 +21,9 @@ public class ProductosController {
 
     @Autowired
     private ProductoRepository repository;
+
+    @Autowired
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     @GetMapping
     public List<Producto> getProductos() {
@@ -33,8 +39,23 @@ public class ProductosController {
 
     @PostMapping
     public Producto crearProducto(@RequestBody Producto producto) {
-        logger.info("Creando nuevo producto: " + producto.getNombre());
-        return repository.save(producto);
+        logger.info("Creando/actualizando producto: " + producto.getNombre());
+        try {
+            if (producto.getNombre() != null && producto.getNombre().contains("FAIL")) {
+                throw new RuntimeException("Error simulado o falla real en procesamiento de producto");
+            }
+            return repository.save(producto);
+        } catch (Exception e) {
+            logger.error("Fallo al procesar el producto. Enviando a topico Kafka product_retry_jobs", e);
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                String payload = mapper.writeValueAsString(producto);
+                kafkaTemplate.send("product_retry_jobs", payload);
+            } catch (Exception ex) {
+                logger.error("Fallo al enviar a Kafka", ex);
+            }
+            throw new RuntimeException("Error al procesar producto, guardado en fallidos.");
+        }
     }
 
     @PutMapping("/{id}")
